@@ -2,7 +2,7 @@
 Document model for storing uploaded file information
 """
 from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Float, Text, Enum
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 from app.database import Base
 import uuid
@@ -35,6 +35,9 @@ class Document(Base):
     # Extracted content
     extracted_text = Column(Text, nullable=True)
     extraction_confidence = Column(Float, nullable=True)
+    
+    # Structured data extracted by LLM
+    structured_data = Column(JSONB, nullable=True)
     
     # Error tracking
     error_message = Column(Text, nullable=True)

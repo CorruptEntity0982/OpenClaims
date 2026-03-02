@@ -85,9 +85,7 @@ async def upload_document(
             )
         
         # Create database record with UUID and initial status
-        document_id = str(uuid.uuid4())
         new_document = Document(
-            id=document_id,
             patient_id=patient_id,
             file_name=file.filename,
             s3_key=s3_key,
@@ -99,6 +97,9 @@ async def upload_document(
         db.add(new_document)
         db.commit()
         db.refresh(new_document)
+        
+        # Get the generated document ID
+        document_id = str(new_document.id)
         
         # Enqueue Celery task for Textract processing
         celery_app.send_task("process_document", args=[document_id])

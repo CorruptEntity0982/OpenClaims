@@ -4,6 +4,7 @@ Pydantic schemas for request/response validation
 from pydantic import BaseModel, EmailStr, Field, ConfigDict
 from datetime import datetime
 from typing import Optional
+from uuid import UUID
 
 
 # Patient Schemas
@@ -34,17 +35,17 @@ class DocumentUpload(BaseModel):
 
 class DocumentResponse(BaseModel):
     """Schema for document response"""
-    id: str
+    id: UUID
     patient_id: str
     file_name: str
     s3_key: str
-    file_size: Optional[int]
-    page_count: Optional[int]
+    file_size: Optional[int] = None
+    page_count: Optional[int] = None
     status: str
     extracted_text: Optional[str] = None
     extraction_confidence: Optional[float] = None
     error_message: Optional[str] = None
-    uploaded_at: datetime
+    created_at: datetime
     processed_at: Optional[datetime] = None
     
     model_config = ConfigDict(from_attributes=True)
