@@ -1,11 +1,11 @@
 # Lattice EC2 Deployment Guide
 
-This guide will walk you through deploying the Lattice application on an AWS EC2 instance with HTTPS enabled using your domain `lattice.soldeck.com`.
+This guide will walk you through deploying the Lattice application on an AWS EC2 instance with HTTPS enabled using your domain `lattice.soldeck.in`.
 
 ## Prerequisites
 
 - AWS Account with EC2 access
-- Domain name (soldeck.com) with access to DNS settings
+- Domain name (soldeck.in) with access to DNS settings
 - SSH key pair for EC2 access
 - Required API keys (AWS, OpenAI)
 
@@ -64,8 +64,8 @@ Ensure your security group has these inbound rules:
 
 ### 2.1 Create A Record for Subdomain
 
-1. Log in to your domain registrar or DNS provider (where soldeck.com is hosted)
-2. Navigate to DNS settings for `soldeck.com`
+1. Log in to your domain registrar or DNS provider (where soldeck.in is hosted)
+2. Navigate to DNS settings for `soldeck.in`
 3. Add an **A Record:**
    - **Host/Name:** `lattice`
    - **Type:** `A`
@@ -76,9 +76,9 @@ Ensure your security group has these inbound rules:
 **DNS propagation can take 5-60 minutes. You can check propagation using:**
 ```bash
 # On your local machine
-dig lattice.soldeck.com
+dig lattice.soldeck.in
 # or
-nslookup lattice.soldeck.com
+nslookup lattice.soldeck.in
 ```
 
 ---
@@ -94,7 +94,7 @@ On your local machine:
 chmod 400 /path/to/your-key-pair.pem
 
 # SSH into the instance
-ssh -i /path/to/your-key-pair.pem ubuntu@lattice.soldeck.com
+ssh -i /path/to/your-key-pair.pem ubuntu@lattice.soldeck.in
 # or use the IP directly if DNS isn't propagated yet:
 # ssh -i /path/to/your-key-pair.pem ubuntu@54.123.45.67
 ```
@@ -138,7 +138,7 @@ exit
 
 Then SSH back in:
 ```bash
-ssh -i /path/to/your-key-pair.pem ubuntu@lattice.soldeck.com
+ssh -i /path/to/your-key-pair.pem ubuntu@lattice.soldeck.in
 ```
 
 Verify installation:
@@ -275,7 +275,7 @@ sudo systemctl reload nginx
 
 ```bash
 # Make sure DNS is propagated first!
-# Test with: dig lattice.soldeck.com
+# Test with: dig lattice.soldeck.in
 
 # Create directory for certbot challenge
 sudo mkdir -p /var/www/certbot
@@ -283,7 +283,7 @@ sudo mkdir -p /var/www/certbot
 # Obtain certificate
 sudo certbot certonly --webroot \
   -w /var/www/certbot \
-  -d lattice.soldeck.com \
+  -d lattice.soldeck.in \
   --email your-email@example.com \
   --agree-tos \
   --non-interactive
@@ -292,8 +292,8 @@ sudo certbot certonly --webroot \
 If successful, you'll see:
 ```
 Successfully received certificate.
-Certificate is saved at: /etc/letsencrypt/live/lattice.soldeck.com/fullchain.pem
-Key is saved at: /etc/letsencrypt/live/lattice.soldeck.com/privkey.pem
+Certificate is saved at: /etc/letsencrypt/live/lattice.soldeck.in/fullchain.pem
+Key is saved at: /etc/letsencrypt/live/lattice.soldeck.in/privkey.pem
 ```
 
 ### 7.2 Enable SSL in Nginx
@@ -305,8 +305,8 @@ sudo nano /etc/nginx/sites-available/lattice
 
 Remove the `#` from:
 ```nginx
-    ssl_certificate /etc/letsencrypt/live/lattice.soldeck.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/lattice.soldeck.com/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/lattice.soldeck.in/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/lattice.soldeck.in/privkey.pem;
 ```
 
 Save, test, and reload:
@@ -378,17 +378,17 @@ docker compose -f docker-compose.prod.yml exec backend alembic upgrade head
 
 ### 9.1 Check Services
 
-1. **Frontend:** https://lattice.soldeck.com
+1. **Frontend:** https://lattice.soldeck.in
    - Should load your React application
    - Check browser console for errors
 
-2. **Backend API:** https://lattice.soldeck.com/api/health
+2. **Backend API:** https://lattice.soldeck.in/api/health
    - Should return a health check response
 
-3. **API Docs:** https://lattice.soldeck.com/docs
+3. **API Docs:** https://lattice.soldeck.in/docs
    - Should show FastAPI Swagger documentation
 
-4. **Neo4j Browser:** http://lattice.soldeck.com:7474
+4. **Neo4j Browser:** http://lattice.soldeck.in:7474
    - Only if you opened port 7474 in security group
    - Not recommended for production (security risk)
 
@@ -403,7 +403,7 @@ Test core features:
 
 ```bash
 # Check certificate details
-echo | openssl s_client -servername lattice.soldeck.com -connect lattice.soldeck.com:443 2>/dev/null | openssl x509 -noout -dates
+echo | openssl s_client -servername lattice.soldeck.in -connect lattice.soldeck.in:443 2>/dev/null | openssl x509 -noout -dates
 ```
 
 ---
@@ -511,7 +511,7 @@ Docker automatically rotates logs, but you can configure it in `/etc/docker/daem
 ### 10.5 Troubleshooting
 
 **Issue: Can't connect to website**
-- Check DNS: `dig lattice.soldeck.com`
+- Check DNS: `dig lattice.soldeck.in`
 - Check nginx: `sudo systemctl status nginx`
 - Check nginx logs: `sudo tail -f /var/log/nginx/error.log`
 - Check security group allows ports 80 and 443
@@ -546,7 +546,7 @@ Docker automatically rotates logs, but you can configure it in `/etc/docker/daem
 - **Production compose:** `docker-compose.prod.yml`
 - **Environment:** `.env.production`
 - **Nginx config:** `/etc/nginx/sites-available/lattice`
-- **SSL certificates:** `/etc/letsencrypt/live/lattice.soldeck.com/`
+- **SSL certificates:** `/etc/letsencrypt/live/lattice.soldeck.in/`
 
 ### Essential Commands
 ```bash
@@ -570,9 +570,9 @@ git pull && docker compose -f docker-compose.prod.yml up -d --build
 ```
 
 ### Support URLs
-- Frontend: https://lattice.soldeck.com
-- API Health: https://lattice.soldeck.com/api/health
-- API Docs: https://lattice.soldeck.com/docs
+- Frontend: https://lattice.soldeck.in
+- API Health: https://lattice.soldeck.in/api/health
+- API Docs: https://lattice.soldeck.in/docs
 
 ---
 
