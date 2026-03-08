@@ -7,6 +7,7 @@ from app.database import get_db
 from app.models.patient import Patient
 from app.models.document import Document, DocumentStatus
 from app.schemas import DocumentResponse
+from app.services.graph_service import graph_service
 from app.services.s3_service import s3_service
 from app.services.pdf_service import validate_pdf
 from celery_worker import celery_app
@@ -168,6 +169,126 @@ async def get_document(
             detail="Document not found"
         )
     return document
+
+
+@router.get("/{document_id}/graph")
+async def get_document_graph(
+    document_id: str,
+    db: Session = Depends(get_db),
+):
+    """
+    Get graph data for a specific document using its structured patient_id.
+
+    This looks up the document, reads `structured_data.patient.patient_id`,
+    and then queries Neo4j for that clinical graph.
+    """
+    # Fetch the document and ensure structured data exists
+    document = db.query(Document).filter(Document.id == document_id).first()
+    if not document:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found",
+        )
+
+    if not document.structured_data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Structured data not available for this document",
+        )
+
+    patient_struct = document.structured_data.get("patient") or {}
+    structured_patient_id = patient_struct.get("patient_id")
+
+    if not structured_patient_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Structured patient_id missing from document data",
+        )
+
+    if not graph_service.driver:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Graph database is unavailable",
+        )
+
+    try:
+        with graph_service.driver.session() as session:
+            query = """
+            MATCH path = (p:Patient {patient_id: $patient_id})-[*1..2]-(n)
+            WITH p, collect(DISTINCT n) as nodes, collect(DISTINCT relationships(path)) as rels
+            RETURN 
+                p as patient_node,
+                nodes,
+                rels
+            """
+
+            result = session.run(query, patient_id=structured_patient_id)
+            record = result.single()
+
+            if not record:
+                return {
+                    "nodes": [],
+                    "relationships": [],
+                    "message": "No graph data found for this document",
+                }
+
+            formatted_nodes = []
+            formatted_relationships = []
+
+            patient_node = dict(record["patient_node"])
+            formatted_nodes.append(
+                {
+                    "id": patient_node.get("patient_id"),
+                    "label": "Patient",
+                    "properties": patient_node,
+                }
+            )
+
+            for node in record["nodes"]:
+                node_dict = dict(node)
+                node_labels = list(node.labels)
+                node_id = (
+                    node_dict.get("encounter_id")
+                    or node_dict.get("claim_id")
+                    or node_dict.get("condition_name")
+                    or node_dict.get("name")
+                )
+
+                formatted_nodes.append(
+                    {
+                        "id": node_id,
+                        "label": node_labels[0] if node_labels else "Unknown",
+                        "properties": node_dict,
+                    }
+                )
+
+            for rel_array in record["rels"]:
+                for rel in rel_array:
+                    formatted_relationships.append(
+                        {
+                            "source": rel.start_node.get("patient_id")
+                            or rel.start_node.get("encounter_id")
+                            or rel.start_node.get("claim_id")
+                            or rel.start_node.get("condition_name")
+                            or rel.start_node.get("name"),
+                            "target": rel.end_node.get("encounter_id")
+                            or rel.end_node.get("claim_id")
+                            or rel.end_node.get("condition_name")
+                            or rel.end_node.get("name"),
+                            "type": rel.type,
+                        }
+                    )
+
+            return {
+                "nodes": formatted_nodes,
+                "relationships": formatted_relationships,
+            }
+    except Exception as e:
+        logger.error(f"Error fetching graph data for document {document_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch graph data: {str(e)}",
+        )
 
 
 @router.get("/patient/{patient_id}", response_model=list[DocumentResponse])
